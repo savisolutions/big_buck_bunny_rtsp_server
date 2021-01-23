@@ -3,10 +3,10 @@ name: CI CD
 on:
   pull_request:
     branches:
-      - master
+      - main
   push:
     branches:
-      - master
+      - main
 
 env:
   ORGANIZATION: getsavi
@@ -35,7 +35,7 @@ jobs:
           docker build --cache-from $LATEST_IMAGE -t $NEW_IMAGE -t $LATEST_IMAGE .
           docker save $LATEST_IMAGE | gzip > docker-cache/latest.tar.gz
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
     steps:
