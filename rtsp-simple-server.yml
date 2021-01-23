@@ -1,0 +1,69 @@
+# sets the verbosity of the program; available values are "warn", "info", "debug".
+logLevel: info
+# destinations of log messages; available values are "stdout", "file" and "syslog".
+logDestinations: [stdout]
+# if "file" is in logDestinations, this is the file which will receive the logs.
+logFile: rtsp-simple-server.log
+
+# supported stream protocols.
+# UDP is the most performant, but can cause problems if there's a NAT between
+# server and clients, and doesn't support encryption.
+# TCP is the most versatile, and does support encryption.
+# The handshake is always performed with TCP.
+protocols: [udp, tcp]
+# encrypt handshake and TCP streams with TLS (RTSPS).
+# available values are "no", "strict", "optional".
+encryption: no
+# listen IP. If provided, all listeners will listen on this specific IP.
+listenIP:
+# port of the TCP/RTSP listener. This is used only if encryption is "no" or "optional".
+rtspPort: 8554
+# port of the TCP/TLS/RTSPS listener. This is used only if encryption is "strict" or "optional".
+rtspsPort: 8555
+# port of the UDP/RTP listener. This is used only if "udp" is in protocols.
+rtpPort: 8000
+# port of the UDP/RTCP listener. This is used only if "udp" is in protocols.
+rtcpPort: 8001
+# path to the server key. This is used only if encryption is "strict" or "optional".
+serverKey: server.key
+# path to the server certificate. This is used only if encryption is "strict" or "optional".
+serverCert: server.crt
+# authentication methods.
+authMethods: [basic, digest]
+# timeout of read operations.
+readTimeout: 10s
+# timeout of write operations.
+writeTimeout: 10s
+# number of read buffers.
+# a higher number allows a higher throughput,
+# a lower number allows to save RAM.
+readBufferCount: 512
+
+# enable Prometheus-compatible metrics on port 9998.
+metrics: no
+# enable pprof on port 9999 to monitor performances.
+pprof: no
+
+# command to run when a client connects to the server.
+# this is terminated with SIGINT when a client disconnects from the server.
+# the server port is available in the RTSP_PORT variable.
+# the restart parameter allows to restart the command if it exits suddenly.
+runOnConnect:
+runOnConnectRestart: no
+
+# these settings are path-dependent.
+# it's possible to use regular expressions by using a tilde as prefix.
+# for example, "~^(test1|test2)$" will match both "test1" and "test2".
+# for example, "~^prefix" will match all paths that start with "prefix".
+# the settings under the path "all" are applied to all paths that do not match
+# another entry.
+paths:
+  big-buck-bunny:
+    # command to run when this path is initialized.
+    # this can be used to publish a stream and keep it always opened.
+    # this is terminated with SIGINT when the program closes.
+    # the path name is available in the RTSP_PATH variable.
+    # the server port is available in the RTSP_PORT variable.
+    # the restart parameter allows to restart the command if it exits suddenly.
+    runOnInit: ffmpeg -re -stream_loop -1 -i BigBuckBunny.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+    runOnInitRestart: yes

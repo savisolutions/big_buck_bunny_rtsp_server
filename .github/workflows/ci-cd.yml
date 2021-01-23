@@ -1,0 +1,60 @@
+name: CI CD
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+env:
+  ORGANIZATION: getsavi
+  IMAGE: big_buck_bunny_rtsp_server
+  DOCKER_MU_USERNAME: ${{ secrets.DOCKER_MU_USERNAME }}
+  DOCKER_MU_PASSWORD: ${{ secrets.DOCKER_MU_PASSWORD }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: docker-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+      - name: Build
+        run: |
+          NEW_IMAGE=$ORGANIZATION/$IMAGE:${GITHUB_REF##*/}-$GITHUB_SHA
+          LATEST_IMAGE=$ORGANIZATION/$IMAGE:latest
+          mkdir docker-cache || true
+          docker load < docker-cache/latest.tar.gz || true
+          docker pull $LATEST_IMAGE || true
+          docker build --cache-from $LATEST_IMAGE -t $NEW_IMAGE -t $LATEST_IMAGE .
+          docker save $LATEST_IMAGE | gzip > docker-cache/latest.tar.gz
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v1
+        with:
+          path: docker-cache
+          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+      - name: Build
+        run: |
+          NEW_IMAGE=$ORGANIZATION/$IMAGE:${GITHUB_REF##*/}-$GITHUB_SHA
+          LATEST_IMAGE=$ORGANIZATION/$IMAGE:latest
+          mkdir docker-cache || true
+          docker load < docker-cache/latest.tar.gz || true
+          docker pull $LATEST_IMAGE || true
+          docker build --cache-from $LATEST_IMAGE -t $NEW_IMAGE -t $LATEST_IMAGE .
+          docker save $LATEST_IMAGE | gzip > docker-cache/latest.tar.gz
+          docker login -u $DOCKER_MU_USERNAME -p $DOCKER_MU_PASSWORD
+          docker push $NEW_IMAGE
+          docker push $LATEST_IMAGE
