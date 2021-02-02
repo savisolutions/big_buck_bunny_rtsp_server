@@ -65,5 +65,5 @@ paths:
     # the path name is available in the RTSP_PATH variable.
     # the server port is available in the RTSP_PORT variable.
     # the restart parameter allows to restart the command if it exits suddenly.
-    runOnInit: ffmpeg -re -stream_loop -1 -i BigBuckBunny.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
+    runOnInit: ffmpeg -re -stream_loop -1 -i BigBuckBunny.mp4 -vcodec libx264 -f rtsp -rtsp_transport tcp rtsp://localhost:$RTSP_PORT/$RTSP_PATH
     runOnInitRestart: yes
