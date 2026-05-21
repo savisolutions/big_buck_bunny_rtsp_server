@@ -1,5 +1,7 @@
 # Big Buck Bunny RTSP Server
 
+Multi-arch image (`linux/amd64`, `linux/arm64`) built on top of [MediaMTX](https://github.com/bluenviron/mediamtx).
+
 ```shell
 # Build
 docker build -t rtsp-server .

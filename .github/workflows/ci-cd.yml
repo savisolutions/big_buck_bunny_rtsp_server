@@ -9,52 +9,35 @@ on:
       - main
 
 env:
-  ORGANIZATION: getsavi
-  IMAGE: big_buck_bunny_rtsp_server
-  DOCKER_MU_USERNAME: ${{ secrets.DOCKER_MU_USERNAME }}
-  DOCKER_MU_PASSWORD: ${{ secrets.DOCKER_MU_PASSWORD }}
+  IMAGE: getsavi/big_buck_bunny_rtsp_server
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
         with:
-          path: docker-cache
-          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-      - name: Build
-        run: |
-          NEW_IMAGE=$ORGANIZATION/$IMAGE:${GITHUB_REF##*/}-$GITHUB_SHA
-          LATEST_IMAGE=$ORGANIZATION/$IMAGE:latest
-          mkdir docker-cache || true
-          docker load < docker-cache/latest.tar.gz || true
-          docker pull $LATEST_IMAGE || true
-          docker build --cache-from $LATEST_IMAGE -t $NEW_IMAGE -t $LATEST_IMAGE .
-          docker save $LATEST_IMAGE | gzip > docker-cache/latest.tar.gz
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v1
+          username: ${{ secrets.DOCKER_MU_USERNAME }}
+          password: ${{ secrets.DOCKER_MU_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
         with:
-          path: docker-cache
-          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-      - name: Build
-        run: |
-          NEW_IMAGE=$ORGANIZATION/$IMAGE:${GITHUB_REF##*/}-$GITHUB_SHA
-          LATEST_IMAGE=$ORGANIZATION/$IMAGE:latest
-          mkdir docker-cache || true
-          docker load < docker-cache/latest.tar.gz || true
-          docker pull $LATEST_IMAGE || true
-          docker build --cache-from $LATEST_IMAGE -t $NEW_IMAGE -t $LATEST_IMAGE .
-          docker save $LATEST_IMAGE | gzip > docker-cache/latest.tar.gz
-          docker login -u $DOCKER_MU_USERNAME -p $DOCKER_MU_PASSWORD
-          docker push $NEW_IMAGE
-          docker push $LATEST_IMAGE
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:main-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
